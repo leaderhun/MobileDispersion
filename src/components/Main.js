@@ -376,11 +376,6 @@ class Main extends Component {
 
     generateRandomGraph = () => {
         const { numberOfEdges, numberOfNodes } = this.state.modals.randomGraphModal.values;
-        
-        if (numberOfEdges > (numberOfNodes * (numberOfNodes - 1) / 2)) {
-            console.log("Too many edges");
-            return;
-        }
 
         let graph = {
             nodes: [],
@@ -570,7 +565,7 @@ class Main extends Component {
                             <Form.Control.Feedback type="invalid">{this.state.modals.randomGraphModal.errors.numberOfNodesErrorMessage}</Form.Control.Feedback>
                         </Form.Group>
                         <Form.Group controlId="numberOfEdges">
-                            <Form.Label>Number of edges besides the edges for tree graph</Form.Label>
+                            <Form.Label>Addational number of edges</Form.Label>
                             <Form.Control
                                 value={this.state.modals.randomGraphModal.values.numberOfEdges}
                                 name="numberOfEdges"
