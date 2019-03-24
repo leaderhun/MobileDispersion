@@ -7,6 +7,11 @@ import {
     Button,
     Modal,
     Form,
+    Table,
+    OverlayTrigger,
+    Tooltip,
+    Dropdown,
+    DropdownButton,
 } from 'react-bootstrap';
 import Graph from 'react-graph-vis';
 import * as actions from 'action';
@@ -22,6 +27,17 @@ const addNewNodeModalDefault = {
     },
 }
 
+const editNodeModalDefault = {
+    values: {
+        show: false,
+        node: null,
+        edges: [],
+    },
+    errors: {
+
+    }
+}
+
 class Main extends Component {
     state = {
         options: {
@@ -29,21 +45,27 @@ class Main extends Component {
                 hierarchical: false
             },
             edges: {
-                color: "#000000"
+                color: "#000000",
+                arrows: {
+                    to:     {enabled: false, scaleFactor:1, type:'arrow'},
+                    middle: {enabled: false, scaleFactor:1, type:'arrow'},
+                    from:   {enabled: false, scaleFactor:1, type:'arrow'}
+                },
             },
             autoResize: true,
             height: '800px',
             width: '100%'
         },
         events: {
-            doubleClick: function(event) {
+            doubleClick: (event) => {
                 let { nodes } = event;
-                console.log('Double click event:', nodes[0]);
+                if (nodes.length == 1) this.toggleEditNodeModal(nodes[0]);
             }
         },
         network: null,
         modals: {
             addNewNodeModal: addNewNodeModalDefault,
+            editNodeModal: editNodeModalDefault,
         },
     } 
     
@@ -57,10 +79,15 @@ class Main extends Component {
                     {id: 5, label: 'E', title: 'Information will come here'}
                 ],
             edges: [
-                    {from: 1, to: 2},
+                    {from: 1, to: 2, title: 'Information will come here'},
+                    {from: 2, to: 1},
                     {from: 1, to: 3},
+                    {from: 3, to: 1},
                     {from: 2, to: 4},
-                    {from: 2, to: 5}
+                    {from: 4, to: 2},
+                    {from: 2, to: 5},
+                    {from: 5, to: 2},
+                    {from: 5, to: 5}
                 ]
         };
 
@@ -68,9 +95,7 @@ class Main extends Component {
     }
 
     componentWillReceiveProps(props) {
-        if (this.state.network) {
-            // this.state.network.setData(props.graph);
-        }
+        console.log(props);
     }
 
     toggleAddNewNodeModal = () => {
@@ -148,7 +173,7 @@ class Main extends Component {
         }
 
         const newGraphNodes = [...graph.nodes];
-        newGraphNodes.push({id: graph.nodes.length + 1, label: values.label, title: 'Information will come here'});
+        newGraphNodes.push({id: Math.max(...graph.nodes.map(x => x.id)) + 1, label: values.label, title: 'Information will come here'});
 
         graph.nodes = [...newGraphNodes];
 
@@ -160,6 +185,146 @@ class Main extends Component {
                 addNewNodeModal: addNewNodeModalDefault,
             }
         }))
+    }
+
+    toggleEditNodeModal = (nodeId) => {
+        let edges = [];
+        
+        this.props.graph.edges.forEach(edge => {
+            if (edge.from === nodeId) {
+                let edgeNodeObject = this.props.graph.nodes.find(x => x.id === edge.to);
+                edges.push(edgeNodeObject);
+            }
+        });
+
+        let nodeToEdit = null;
+
+        this.props.graph.nodes.forEach(node => {
+            if (node.id === nodeId) {
+                nodeToEdit = node;
+            }
+        })
+
+        this.setState((s) => ({
+            ...s,
+            modals: {
+                ...s.modals,
+                editNodeModal: {
+                    ...editNodeModalDefault,
+                    values: {
+                        ...editNodeModalDefault.values,
+                        edges,
+                        node: nodeToEdit,
+                        show: !s.modals.editNodeModal.values.show,
+                    }
+                }
+            }
+        }));
+    }
+
+    saveNode = () => {
+        const from = this.state.modals.editNodeModal.values.node.id;
+        const toArray = this.state.modals.editNodeModal.values.edges.map(x => x.id);
+
+        const graph = {
+            ...this.props.graph,
+            edges: this.props.graph.edges.filter(x => x.from !== from).filter(x => x.to !== from),
+        };
+
+        console.log(graph.edges);
+
+        toArray.forEach(to => {
+            graph.edges.push({from, to});
+            if (from !== to) graph.edges.push({from: to, to: from});
+        });
+
+        this.props.setGraph(graph);
+        this.setState((s) => ({
+            ...s,
+            modals: {
+                ...s.modals,
+                editNodeModal: editNodeModalDefault,
+            }
+        }));
+    }
+
+    deleteNode = () => {
+        const nodeId = this.state.modals.editNodeModal.values.node.id;
+        const graph = {
+            nodes: [],
+            edges: [],
+        };
+
+        this.props.graph.nodes.forEach(node => {
+            if (node.id !== nodeId) {
+                graph.nodes.push(node);
+            }
+        });
+
+        this.props.graph.edges.forEach(edge => {
+            if (edge.from !== nodeId && edge.to !== nodeId) {
+                graph.edges.push(edge)
+            };
+        });
+
+        this.props.setGraph(graph);
+        this.setState((s) => ({
+            ...s,
+            modals: {
+                ...s.modals,
+                editNodeModal: editNodeModalDefault,
+            }
+        }));
+    }
+
+    deleteEdge = (edgeId) => {
+        const newEdges = [...this.state.modals.editNodeModal.values.edges];
+        const index = newEdges.findIndex(x => x.id === edgeId);
+        newEdges.splice(index, 1);
+
+        this.setState((s) => ({
+            ...s,
+            modals: {
+                ...s.modals,
+                editNodeModal: {
+                    ...s.modals.editNodeModal,
+                    values: {
+                        ...s.modals.editNodeModal.values,
+                        edges: newEdges,
+                    },
+                },
+            },
+        }));
+    }
+
+    addEdge = (edge) => {
+        const newEdges = [...this.state.modals.editNodeModal.values.edges];
+        newEdges.push(edge);
+
+        this.setState((s) => ({
+            ...s,
+            modals: {
+                ...s.modals,
+                editNodeModal: {
+                    ...s.modals.editNodeModal,
+                    values: {
+                        ...s.modals.editNodeModal.values,
+                        edges: newEdges,
+                    },
+                },
+            },
+        }));
+    }
+
+    getAvailableNodes = () => {
+        let nodes = [];
+        
+        if (this.props.graph) {
+            const usedNodes = this.state.modals.editNodeModal.values.edges.map(x => x.id);
+            nodes = this.props.graph.nodes.filter(node => !usedNodes.includes(node.id));
+        }      
+
+        return nodes;
     }
 
     render() {
@@ -223,6 +388,65 @@ class Main extends Component {
                         </Button>
                         <Button variant="primary" onClick={this.addNewNode}>
                             Add
+                        </Button>
+                    </Modal.Footer>
+                </Modal>
+                <Modal show={this.state.modals.editNodeModal.values.show} onHide={this.toggleEditNodeModal}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Edit node: {this.state.modals.editNodeModal.values.node ? this.state.modals.editNodeModal.values.node.label : ''}</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <DropdownButton
+                            className="pb-3"
+                            size="sm"
+                            variant="primary"
+                            title="Add edge"
+                            id={`dropdown-button-drop`}
+                        >
+                            {this.getAvailableNodes().map((node, index) => (
+                                <Dropdown.Item onClick={() => this.addEdge(node)} key={index} eventKey={index}>{node.label}</Dropdown.Item>
+                            ))}
+                        </DropdownButton>
+                        <Table striped bordered hover size="sm">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>To</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {this.state.modals.editNodeModal.values.edges.map((edge, index) => (
+                                    <tr key={edge.id}>
+                                        <th>{index}</th>
+                                        <th>{edge.label}</th>
+                                        <th>
+                                            <OverlayTrigger
+                                                key={edge.id}
+                                                placement="top"
+                                                overlay={
+                                                    <Tooltip id={`tooltip-${edge.id}`}>
+                                                        Delete
+                                                    </Tooltip>
+                                                }
+                                            >
+                                                <i className="fas fa-trash" onClick={() => this.deleteEdge(edge.id)} />
+                                            </OverlayTrigger>
+                                        </th>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                    </Modal.Body>
+                    <Modal.Footer className="d-flex justify-content-center">
+                        <Button variant="secondary" onClick={this.toggleEditNodeModal}>
+                            Cancel
+                        </Button>
+                        <Button variant="primary" onClick={this.saveNode}>
+                            Save
+                        </Button>
+                        <Button variant="danger" onClick={this.deleteNode}>
+                            Delete
                         </Button>
                     </Modal.Footer>
                 </Modal>
