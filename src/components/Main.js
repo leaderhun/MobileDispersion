@@ -38,6 +38,20 @@ const editNodeModalDefault = {
     }
 }
 
+const randomGraphModalDefault = {
+    values: {
+        show: false,
+        numberOfNodes: 0,
+        numberOfEdges: 0,
+    },
+    errors: {
+        numberOfNodesError: null,
+        numberOfNodesErrorMessage: null,
+        numberOfEdgesError: null,
+        numberOfEdgesErrorMessage: null,
+    }
+}
+
 class Main extends Component {
     state = {
         options: {
@@ -66,28 +80,29 @@ class Main extends Component {
         modals: {
             addNewNodeModal: addNewNodeModalDefault,
             editNodeModal: editNodeModalDefault,
+            randomGraphModal: randomGraphModalDefault,
         },
     } 
     
     componentDidMount() {      
         const graph = {
             nodes: [
-                    {id: 1, label: 'A', title: 'Information will come here'},
-                    {id: 2, label: 'B', title: 'Information will come here'},
-                    {id: 3, label: 'C', title: 'Information will come here'},
-                    {id: 4, label: 'D', title: 'Information will come here'},
-                    {id: 5, label: 'E', title: 'Information will come here'}
+                    { id: 1, label: 'A' },
+                    { id: 2, label: 'B' },
+                    { id: 3, label: 'C' },
+                    { id: 4, label: 'D' },
+                    { id: 5, label: 'E' }
                 ],
             edges: [
-                    {from: 1, to: 2, title: 'Information will come here'},
-                    {from: 2, to: 1},
-                    {from: 1, to: 3},
-                    {from: 3, to: 1},
-                    {from: 2, to: 4},
-                    {from: 4, to: 2},
-                    {from: 2, to: 5},
-                    {from: 5, to: 2},
-                    {from: 5, to: 5}
+                    { from: 1, to: 2 },
+                    { from: 2, to: 1 },
+                    { from: 1, to: 3 },
+                    { from: 3, to: 1 },
+                    { from: 2, to: 4 },
+                    { from: 4, to: 2 },
+                    { from: 2, to: 5 },
+                    { from: 5, to: 2 },
+                    { from: 5, to: 5 }
                 ]
         };
 
@@ -231,8 +246,6 @@ class Main extends Component {
             edges: this.props.graph.edges.filter(x => x.from !== from).filter(x => x.to !== from),
         };
 
-        console.log(graph.edges);
-
         toArray.forEach(to => {
             graph.edges.push({from, to});
             if (from !== to) graph.edges.push({from: to, to: from});
@@ -327,6 +340,89 @@ class Main extends Component {
         return nodes;
     }
 
+    toggleNewRandomGraphModal = () => {
+        this.setState((s) => ({
+            ...s,
+            modals: {
+                ...s.modals,
+                randomGraphModal: {
+                    ...randomGraphModalDefault,
+                    values: {
+                        ...randomGraphModalDefault.values,
+                        show: !s.modals.randomGraphModal.values.show,
+                    },
+                },
+            },
+        }));
+    }
+
+    handleRandomGraphModalValueChange = ({ target }) => {
+        if (isNaN(target.value)) return;
+        
+        this.setState((s) => ({
+            ...s,
+            modals: {
+                ...s.modals,
+                randomGraphModal: {
+                    ...s.modals.randomGraphModal,
+                    values: {
+                        ...s.modals.randomGraphModal.values,
+                        [target.name]: parseInt(target.value),
+                    },
+                },
+            },
+        }))
+    }
+
+    generateRandomGraph = () => {
+        const { numberOfEdges, numberOfNodes } = this.state.modals.randomGraphModal.values;
+        
+        if (numberOfEdges > (numberOfNodes * (numberOfNodes - 1) / 2)) {
+            console.log("Too many edges");
+            return;
+        }
+
+        let graph = {
+            nodes: [],
+            edges: [],
+        };
+
+        for (let i = 0; i < numberOfNodes; i++) {
+            graph.nodes.push({ id: i + 1, label: (i + 1).toString() });
+        }
+
+        for (let i = 1; i < numberOfNodes; i++) {
+            let from = i;
+            let to = i+1;
+            graph.edges.push({from, to});
+            graph.edges.push({from: to, to: from});
+        }
+
+        for (let i = 0; i < numberOfEdges; i++) {
+            let from = Math.floor(Math.random() * (numberOfNodes)) + 1;
+            let to = Math.floor(Math.random() * (numberOfNodes)) + 1;
+
+            while(graph.edges.filter(x => x.from === from && x.to === to).length > 0
+                || graph.edges.filter(x => x.to === from && x.from === to).length > 0
+            ) {
+                from = Math.floor(Math.random() * (numberOfNodes)) + 1;
+                to = Math.floor(Math.random() * (numberOfNodes)) + 1;
+            }
+
+            graph.edges.push({from, to});
+            if (from !== to) graph.edges.push({from: to, to: from});
+        }
+
+        this.props.setGraph(graph);
+        this.setState((s) => ({
+            ...s,
+            modals: {
+                ...s.modals,
+                randomGraphModal: randomGraphModalDefault,
+            }
+        }));
+    }
+
     render() {
         return (
             <>
@@ -356,10 +452,15 @@ class Main extends Component {
                             }
                         </Col>
                         <Col xs={3}>
-                            <h2 className="text-center pt-3">Configuration</h2>
-                            <div className="d-flex justify-content-center">
+                            <Row className="pt-3 text-center">
+                                <h2>Configuration</h2>
+                            </Row>
+                            <Row className="text-center pt-3">
                                 <Button variant="primary" block onClick={this.toggleAddNewNodeModal}>Add new node</Button>
-                            </div>
+                            </Row>
+                            <Row className="text-center pt-3">
+                                <Button variant="primary" block onClick={this.toggleNewRandomGraphModal}>Generate random graph</Button>
+                            </Row>
                         </Col>
                     </Row>
                 </Container>
@@ -447,6 +548,47 @@ class Main extends Component {
                         </Button>
                         <Button variant="danger" onClick={this.deleteNode}>
                             Delete
+                        </Button>
+                    </Modal.Footer>
+                </Modal>
+                <Modal show={this.state.modals.randomGraphModal.values.show} onHide={this.toggleNewRandomGraphModal}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Generate random graph</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                    <Form>
+                        <Form.Group controlId="numberOfNodes">
+                            <Form.Label>Number of nodes</Form.Label>
+                            <Form.Control
+                                value={this.state.modals.randomGraphModal.values.numberOfNodes}
+                                name="numberOfNodes"
+                                onChange={this.handleRandomGraphModalValueChange}
+                                type="text"
+                                isInvalid={this.state.modals.randomGraphModal.errors.numberOfNodesError}
+                                placeholder="Enter the number of nodes"
+                            />
+                            <Form.Control.Feedback type="invalid">{this.state.modals.randomGraphModal.errors.numberOfNodesErrorMessage}</Form.Control.Feedback>
+                        </Form.Group>
+                        <Form.Group controlId="numberOfEdges">
+                            <Form.Label>Number of edges besides the edges for tree graph</Form.Label>
+                            <Form.Control
+                                value={this.state.modals.randomGraphModal.values.numberOfEdges}
+                                name="numberOfEdges"
+                                onChange={this.handleRandomGraphModalValueChange}
+                                type="text"
+                                isInvalid={this.state.modals.randomGraphModal.errors.numberOfEdgesError}
+                                placeholder="Enter the number of edges"
+                            />
+                            <Form.Control.Feedback type="invalid">{this.state.modals.randomGraphModal.errors.numberOfEdgesErrorMessage}</Form.Control.Feedback>
+                        </Form.Group>
+                    </Form>
+                    </Modal.Body>
+                    <Modal.Footer className="d-flex justify-content-center">
+                        <Button variant="secondary" onClick={this.toggleNewRandomGraphModal}>
+                            Cancel
+                        </Button>
+                        <Button variant="primary" onClick={this.generateRandomGraph}>
+                            Generate
                         </Button>
                     </Modal.Footer>
                 </Modal>
