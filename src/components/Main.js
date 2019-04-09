@@ -567,6 +567,12 @@ class Main extends Component {
         }
     }
 
+    run = () => {
+        if (this.state.algorithmIsRunning) {
+            this.props.run(this.state.values.algorithm);
+        }
+    }
+
     render() {
         return (
             <>
@@ -811,7 +817,8 @@ const mapStateToProps = state => ({
 const mapDispatchToProps = dispatch => ({
     initAlgorithm: (graph, algorithm) => dispatch(actions.initAlgorithm(graph, algorithm)),
     setGraph: (graph) => dispatch(actions.setGraph(graph)),
-    step: (algorithm) => dispatch(actions.step(algorithm))
+    step: (algorithm) => dispatch(actions.step(algorithm)),
+    run: (algorithm) => dispatch(actions.run(algorithm)),
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(Main);

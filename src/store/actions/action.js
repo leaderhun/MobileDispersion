@@ -29,7 +29,7 @@ export const initAlgorithm = (graph, algorithm) => (dispatch) => {
             const endPoint = algorithm === 0 ? 'helpingSync' : (algorithm === 1 ? 'helpingAsync' : '');
             requestUrl = encodeURI(`${process.env.API_URL}/${endPoint}/init`);
 
-            axios.post(requestUrl, builtGraph)
+            axios.post(requestUrl, { ...builtGraph })
                 .then(() => {
                 })
                 .catch(err => console.log(err));
