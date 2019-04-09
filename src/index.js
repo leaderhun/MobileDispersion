@@ -10,6 +10,7 @@ import Main from 'Main';
 
 const defaultStore = {
     graph: null,
+    robots: null,
 };
 
 const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;

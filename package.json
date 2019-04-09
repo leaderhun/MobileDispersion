@@ -11,8 +11,8 @@
     "lint-fix": "eslint . --fix --ext .js --ext .jsx --no-eslintrc dist",
     "i": "npm run pkg-lock-off && npm i",
     "i-force": "npm run clean-node && npm run i",
-    "start": "webpack-dev-server --port 8080 --env.API_URL= --config build/webpack.run.config.js --mode development",
-    "build": "webpack --env.API_URL= --config build/webpack.prod.config.js --progress --profile --color"
+    "start": "webpack-dev-server --port 8081 --env.API_URL=http://localhost:8080/api --config build/webpack.run.config.js --mode development",
+    "build": "webpack --env.API_URL=http://localhost:8080/api --config build/webpack.prod.config.js --progress --profile --color"
   },
   "author": "Norbert Szoboszlai",
   "devDependencies": {

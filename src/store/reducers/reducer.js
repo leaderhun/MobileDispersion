@@ -7,6 +7,11 @@ const reducer = (state, action) => {
                 ...state,
                 graph: action.graph,
             };
+        case actions.STORE_ROBOTS:
+            return {
+                ...state,
+                robots: action.robots,
+            };
         default:
             return state;
     }

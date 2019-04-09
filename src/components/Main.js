@@ -16,6 +16,12 @@ import {
 import Graph from 'react-graph-vis';
 import * as actions from 'action';
 
+const algorithms = {
+    HelpingSync: 0,
+    HelpingAsync: 1,
+    IndependentAsync: 2,
+};
+
 const addNewNodeModalDefault = {
     values: {
         show: false,
@@ -82,6 +88,13 @@ class Main extends Component {
             editNodeModal: editNodeModalDefault,
             randomGraphModal: randomGraphModalDefault,
         },
+        values: {
+            numberOfRobots: 1,
+            nodesToStartFrom: '',
+            algorithm: 0,
+        },
+        algorithmIsRunning: false,
+        previousRobots: null,
     } 
     
     componentDidMount() {      
@@ -109,11 +122,133 @@ class Main extends Component {
         this.props.setGraph(graph);
     }
 
+    startAlgorithm = () => {
+        const graph = this.getCompatibleGraph();
+        
+        this.setState(s => ({
+            ...s,
+            algorithmIsRunning: true
+        }), () => this.props.initAlgorithm(graph, this.state.values.algorithm));
+    }
+
+    getCompatibleGraph = () => {
+        let nodesForRobots = new Set(this.state.values.nodesToStartFrom.split(';'));
+        let robotPerNode = Math.floor(this.state.values.numberOfRobots / nodesForRobots.size);
+        let modulo = this.state.values.numberOfRobots % nodesForRobots.size;
+        let usedRobots = 0;
+        let first = true;
+
+        let result = [];
+
+        this.props.graph.nodes.forEach((node, nI) => {
+            let row = node.label + ':';
+            let edges = this.props.graph.edges.filter(e => e.from === node.id);
+
+            edges.forEach((e, eI) => {
+                let toNode = this.props.graph.nodes.find(x => x.id === e.to);
+                row += toNode.label;
+
+                if (eI !== edges.length - 1) {
+                    row += ',';
+                }
+            });
+
+            if (nodesForRobots.has(node.label)) {
+                row += ':';
+                let ending = robotPerNode + (first ? modulo : 0);
+                first = false;
+
+                for (let i = 0; i < ending; i++) {
+                    row += (usedRobots + i + 1).toString();
+
+                    if (i !== ending - 1) {
+                        row += ',';
+                    }
+                };
+
+                usedRobots += ending;
+            };
+
+            result.push(row);
+        });
+
+        return result;
+    }
+
     componentWillReceiveProps(props) {
-        console.log(props);
+        if (props.robots && props.robots != this.state.previousRobots) {
+            const greenColor = '#39ff14';
+            const orangeColor = '#FFA500';
+            
+            let newGraph = { ...props.graph };
+            let newNodes = [];
+
+            newGraph.nodes.forEach(node => {
+                let filteredRobot = Object.fromEntries(Object.entries(props.robots).filter(([k,v]) => v.parentNode  === node.label));
+
+                let title = '';
+                let color = null;
+                Object.keys(filteredRobot).forEach((key, i) => {
+                    const rob = filteredRobot[key];
+
+                    if (typeof rob === 'function') return;
+
+                    title += `${key} Robot moving to ${rob.movingTo}<br>speed: ${rob.speed}<br>position: ${rob.currentPosition}<br>----------------<br>`
+
+                    if (i === 0) {
+                        color = greenColor;
+                    } else {
+                        color = orangeColor;
+                    }
+                });
+
+                title = title === '' ? null : title;
+
+                const newNode = {
+                    ...node,
+                    title,
+                    color,
+                };
+
+                newNodes.push(newNode);
+            });
+            
+            newGraph.nodes = newNodes;
+
+            this.setState(s => ({
+                ...s,
+                previousRobots: props.robots,
+            }), () => this.props.setGraph(newGraph));  
+        }
+    }
+
+    handleIntValueChange = ({target}) => {
+        if (this.state.algorithmIsRunning) return;
+        
+        this.setState((s) => ({
+            ...s,
+            values: {
+                ...s.values,
+                [target.name]: parseInt(target.value),
+            }
+        }));
+    }
+
+    handleValueChange = ({target}) => {
+        if (this.state.algorithmIsRunning) return;
+        
+        this.setState((s) => ({
+            ...s,
+            values: {
+                ...s.values,
+                nodesToStartFrom: target.value,
+            }
+        }));
     }
 
     toggleAddNewNodeModal = () => {
+        if (this.state.algorithmIsRunning) return;
+        
         this.setState((s) => ({
             ...s,
             modals: {
@@ -132,6 +267,8 @@ class Main extends Component {
     }
 
     handleNodeLabelChange = ({ target }) => {
+        if (this.state.algorithmIsRunning) return;
+        
         this.setState((s) => ({
             ...s,
             modals: {
@@ -203,6 +340,8 @@ class Main extends Component {
     }
 
     toggleEditNodeModal = (nodeId) => {
+        if (this.state.algorithmIsRunning) return;
+        
         let edges = [];
         
         this.props.graph.edges.forEach(edge => {
@@ -341,6 +480,8 @@ class Main extends Component {
     }
 
     toggleNewRandomGraphModal = () => {
+        if (this.state.algorithmIsRunning) return;
+        
         this.setState((s) => ({
             ...s,
             modals: {
@@ -357,6 +498,8 @@ class Main extends Component {
     }
 
     handleRandomGraphModalValueChange = ({ target }) => {
+        if (this.state.algorithmIsRunning) return;
+        
         if (isNaN(target.value)) return;
         
         this.setState((s) => ({
@@ -418,6 +561,12 @@ class Main extends Component {
         }));
     }
 
+    nextStep = () => {
+        if (this.state.algorithmIsRunning) {
+            this.props.step(this.state.values.algorithm);
+        }
+    }
+
     render() {
         return (
             <>
@@ -451,10 +600,72 @@ class Main extends Component {
                                 <h2>Configuration</h2>
                             </Row>
                             <Row className="text-center pt-3">
-                                <Button variant="primary" block onClick={this.toggleAddNewNodeModal}>Add new node</Button>
+                                <Button disabled={this.state.algorithmIsRunning} variant="primary" block onClick={this.toggleAddNewNodeModal}>Add new node</Button>
                             </Row>
                             <Row className="text-center pt-3">
-                                <Button variant="primary" block onClick={this.toggleNewRandomGraphModal}>Generate random graph</Button>
+                                <Button disabled={this.state.algorithmIsRunning} variant="primary" block onClick={this.toggleNewRandomGraphModal}>Generate random graph</Button>
+                            </Row>
+                            <Row className="text-center pt-3">
+                                <Form.Group controlId="numberOfRobots" style={{ width: '100%' }}>
+                                    <Form.Label>Number of robots</Form.Label>
+                                    <Form.Control
+                                        disabled={this.state.algorithmIsRunning}
+                                        value={this.state.values.numberOfRobots}
+                                        name="numberOfRobots"
+                                        onChange={this.handleIntValueChange}
+                                        type="text"
+                                        placeholder="Enter the number of robots"
+                                    />
+                                    <Form.Control.Feedback type="invalid"></Form.Control.Feedback>
+                                </Form.Group>                        
+                                <Form.Group controlId="nodesToStartFrom" style={{ width: '100%' }}>
+                                    <Form.Label>Starting nodes (delimiter: ';')</Form.Label>
+                                    <Form.Control
+                                         disabled={this.state.algorithmIsRunning}
+                                        value={this.state.values.nodesToStartFrom}
+                                        name="nodesToStartFrom"
+                                        onChange={this.handleValueChange}
+                                        type="text"
+                                        placeholder="Starting nodes"
+                                    />
+                                    <Form.Control.Feedback type="invalid"></Form.Control.Feedback>
+                                </Form.Group>
+                                <Form.Group style={{ width: '100%' }}>
+                                    <Form.Label>Algorithm</Form.Label>
+                                    <Form.Control
+                                        as="select"
+                                        disabled={this.state.algorithmIsRunning}
+                                        value={this.state.values.algorithm}
+                                        onChange={this.handleIntValueChange}
+                                        name="algorithm"
+                                        id="algorithm"
+                                    >
+                                        { Object.keys(algorithms).map((key) => {
+                                            const value = algorithms[key];
+
+                                            if (typeof value === 'function') return null;
+
+                                            return (
+                                                <option
+                                                    key={value}
+                                                    value={value}
+                                                >
+                                                    {key}
+                                                </option>
+                                            );
+                                        }) }
+                                    </Form.Control>
+                                    <Form.Control.Feedback type="invalid"></Form.Control.Feedback>
+                                </Form.Group>
+                            </Row>
+                            <Row className="text-center pt-3">
+                                <Button disabled={this.state.algorithmIsRunning} variant="primary" block onClick={this.startAlgorithm}>Init</Button>
+                            </Row>
+                            <Row className="text-center pt-3">
+                                <Button disabled={!this.state.algorithmIsRunning} variant="primary" block onClick={this.nextStep}>Next step</Button>
+                            </Row>
+                            <Row className="text-center pt-3">
+                                <Button disabled={!this.state.algorithmIsRunning} variant="primary" block onClick={this.run}>Run</Button>
                             </Row>
                         </Col>
                     </Row>
@@ -594,11 +805,13 @@ class Main extends Component {
 
 const mapStateToProps = state => ({
     graph: state.graph,
+    robots: state.robots,
 });
 
 const mapDispatchToProps = dispatch => ({
-    getGraph: () => dispatch(actions.getGraph()),
+    initAlgorithm: (graph, algorithm) => dispatch(actions.initAlgorithm(graph, algorithm)),
     setGraph: (graph) => dispatch(actions.setGraph(graph)),
+    step: (algorithm) => dispatch(actions.step(algorithm))
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(Main);
