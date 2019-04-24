@@ -43,7 +43,7 @@ export const step = (algorithm) => (dispatch) => {
 
     axios.post(requestUrl)
         .then((response) => {
-            console.log(response);
+            dispatch(storeRobots(response.data));
         })
         .catch(err => console.log(err));
 };
@@ -54,7 +54,7 @@ export const run = (algorithm) => (dispatch) => {
 
     axios.post(requestUrl)
         .then((response) => {
-            console.log(response);
+            dispatch(storeRobots(response.data));
         })
         .catch(err => console.log(err));
 };
