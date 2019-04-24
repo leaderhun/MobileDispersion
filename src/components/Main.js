@@ -159,7 +159,7 @@ class Main extends Component {
                 first = false;
 
                 for (let i = 0; i < ending; i++) {
-                    row += (usedRobots + i + 1).toString();
+                    row += (usedRobots + i).toString();
 
                     if (i !== ending - 1) {
                         row += ',';
@@ -184,7 +184,7 @@ class Main extends Component {
             let newNodes = [];
 
             newGraph.nodes.forEach(node => {
-                let filteredRobot = Object.fromEntries(Object.entries(props.robots).filter(([k,v]) => v.parentNode  === node.label));
+                let filteredRobot = Object.fromEntries(Object.entries(props.robots).filter(([k,v]) => v.movingTo  === node.label));
 
                 let title = '';
                 let color = null;
@@ -193,7 +193,7 @@ class Main extends Component {
 
                     if (typeof rob === 'function') return;
 
-                    title += `${key} Robot moving to ${rob.movingTo}<br>speed: ${rob.speed}<br>position: ${rob.currentPosition}<br>----------------<br>`
+                    title += `${key} Robot moving to ${rob.movingTo}<br>parentNode: ${rob.parentNode}<br>speed: ${rob.speed}<br>position: ${rob.currentPosition}<br>----------------<br>`
 
                     if (i === 0) {
                         color = greenColor;

@@ -26,7 +26,7 @@ export const initAlgorithm = (graph, algorithm) => (dispatch) => {
 
             dispatch(storeRobots(builtGraph.robots));
 
-            const endPoint = algorithm === 0 ? 'helpingSync' : (algorithm === 1 ? 'helpingAsync' : '');
+            const endPoint = algorithm === 0 ? 'helpingSync' : (algorithm === 1 ? 'helpingAsync' : 'independentAsync');
             requestUrl = encodeURI(`${process.env.API_URL}/${endPoint}/init`);
 
             axios.post(requestUrl, { ...builtGraph })
@@ -38,7 +38,7 @@ export const initAlgorithm = (graph, algorithm) => (dispatch) => {
 };
 
 export const step = (algorithm) => (dispatch) => {
-    const endPoint = algorithm === 0 ? 'helpingSync' : (algorithm === 1 ? 'helpingAsync' : '');
+    const endPoint = algorithm === 0 ? 'helpingSync' : (algorithm === 1 ? 'helpingAsync' : 'independentAsync');
     const requestUrl = encodeURI(`${process.env.API_URL}/${endPoint}/step`);
 
     axios.post(requestUrl)
@@ -49,7 +49,7 @@ export const step = (algorithm) => (dispatch) => {
 };
 
 export const run = (algorithm) => (dispatch) => {
-    const endPoint = algorithm === 0 ? 'helpingSync' : (algorithm === 1 ? 'helpingAsync' : '');
+    const endPoint = algorithm === 0 ? 'helpingSync' : (algorithm === 1 ? 'helpingAsync' : 'independentAsync');
     const requestUrl = encodeURI(`${process.env.API_URL}/${endPoint}/run`);
 
     axios.post(requestUrl)
